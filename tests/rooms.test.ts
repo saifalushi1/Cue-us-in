@@ -1,0 +1,6 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { canJoin, cleanName, cleanText, secret, type Room, type Member } from '../server/rooms.ts';
+test('invites are long, unpredictable and distinct',()=>{const ids=new Set(Array.from({length:1000},secret));assert.equal(ids.size,1000);for(const id of ids)assert.match(id,/^[\w-]{32}$/);});
+test('chat and display names accept text only and enforce bounds',()=>{assert.equal(cleanName(null),'Guest');assert.equal(cleanName('  '),'Guest');assert.equal(cleanName(' Saifo '),'Saifo');assert.equal(cleanName('x'.repeat(100)).length,32);assert.equal(cleanText({text:'bad'}),'');assert.equal(cleanText('x'.repeat(3000)).length,2000);});
+test('two seats and host role cannot be claimed with an invite alone',()=>{const room:Room={id:secret(),hostKey:secret(),members:new Map(),messages:[],touched:Date.now()};const member:Member={id:'1',name:'A',host:true,camera:false,mic:false,sharing:false,source:''};room.members.set(member.id,member);assert.equal(canJoin(room),null);assert.match(canJoin(room,room.hostKey)!,/host is already/);room.members.set('2',{...member,id:'2',host:false});assert.match(canJoin(room)!,/two people/);room.members.delete('1');assert.match(canJoin(room)!,/guest seat/);assert.equal(canJoin(room,room.hostKey),null);});
